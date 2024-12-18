@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WalletWatch</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* General body styling */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f9f9f9;
+        }
+
+        /* Header styling */
+        header {
+            background-color: #333;
+            color: white;
+            width: 100%;
+            text-align: center;
+            padding: 1rem 0;
+        }
+
+        /* Main content styling */
+        main {
+            width: 90%;
+            max-width: 800px;
+            margin-top: 2rem;
+        }
+
+        /* Section styling */
+        section {
+            background-color: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Heading 2 styling */
+        h2 {
+            margin-bottom: 1rem;
+            color: #333;
+        }
+
+        /* Form group styling */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        /* Label styling */
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Input and select styling */
+        input,
+        select {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        /* Button styling */
+        button {
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        /* Button hover effect */
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Transaction list styling */
+        #transaction-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        /* Transaction list item styling */
+        #transaction-list li {
+            padding: 0.5rem;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Summary section styling */
+        #summary {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Summary item styling */
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Chart section styling */
+        #chart-section {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Edit and delete button styling */
+        .edit-btn,
+        .delete-btn {
+            padding: 0.25rem 0.5rem;
+            margin-left: 0.5rem;
+            font-size: 0.8rem;
+        }
+
+        /* Edit button styling */
+        .edit-btn {
+            background-color: #FFC107;
+        }
+
+        /* Delete button styling */
+        .delete-btn {
+            background-color: #f44336;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Header section -->
+    <header>
+        <h1>WalletWatch</h1>
+    </header>
+    <main>
+        <!-- Authentication section -->
+        <section id="auth-section">
+            <h2 id="auth-title">Login</h2>
+            <form id="auth-form" data-mode="login">
+                <div class="form-group">
+                    <label for="username">Username:</label>
+                    <input type="text" name="username" id="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password:</label>
+                    <input type="password" name="password" id="password" required>
+                </div>
+                <button type="submit" id="auth-btn">Login</button>
+                <p id="toggle-auth">Don't have an account? <a href="#" id="toggle-link">Register here</a></p>
+            </form>
+        </section>
+
+        <!-- Transaction form section -->
+        <section id="transaction-form" style="display:none;">
+            <h2>Add Transaction</h2>
+            <form id="add-transaction-form">
+                <div class="form-group">
+                    <label for="type">Type:</label>
+                    <select name="type" id="type">
+                        <option value="income">Income</option>
+                        <option value="expense">Expense</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="amount">Amount:</label>
+                    <input type="number" name="amount" id="amount" step="0.01" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label for="category">Category:</label>
+                    <input type="text" name="category" id="category" required>
+                </div>
+                <button type="submit">Add Transaction</button>
+            </form>
+        </section>
+
+        <!-- Transactions section -->
+        <section id="transactions" style="display:none;">
+            <h2>Transactions</h2>
+            <ul id="transaction-list"></ul>
+        </section>
+
+        <!-- Summary section -->
+        <section id="summary" style="display:none;">
+            <h2>Summary</h2>
+            <div class="summary-item">
+                <p>Total Income:</p>
+                <span id="total-income">$0</span>
+            </div>
+            <div class="summary-item">
+                <p>Total Expense:</p>
+                <span id="total-expense">$0</span>
+            </div>
+            <div class="summary-item">
+                <p>Balance:</p>
+                <span id="balance">$0</span>
+            </div>
+            <button id="logout-btn">Logout</button>
+        </section>
+
+        <!-- Chart section -->
+        <section id="chart-section" style="display:none;">
+            <canvas id="income-expense-chart"></canvas>
+        </section>
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Event listener for DOMContentLoaded
+        document.addEventListener('DOMContentLoaded', () => {
+            const authForm = document.getElementById('auth-form');
+            const addTransactionForm = document.getElementById('add-transaction-form');
+            const authSection = document.getElementById('auth-section');
+            const transactionForm = document.getElementById('transaction-form');
+            const transactionsSection = document.getElementById('transactions');
+            const summarySection = document.getElementById('summary');
+            const toggleLink = document.getElementById('toggle-link');
+            const transactionList = document.getElementById('transaction-list');
+            const chartSection = document.getElementById('chart-section');
+            const incomeExpenseChart = document.getElementById('income-expense-chart');
+            const logoutBtn = document.getElementById('logout-btn');
+
+            let transactionsData = [];
+            let chart = null;
+
+            // Function to initialize the chart
+            function initializeChart() {
+                if (incomeExpenseChart) {
+                    chart = new Chart(incomeExpenseChart, {
+                        type: 'bar',
+                        data: {
+                            labels: ['Income', 'Expense'],
+                            datasets: [{
+                                label: 'Amount',
+                                data: [0, 0],
+                                backgroundColor: ['#007BFF', '#f44336'],
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: {
+                                    position: 'top',
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: (context) => `$${context.raw.toFixed(2)}`
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+
+            // Function to register a new user
+            function registerUser(username, password) {
+                const users = JSON.parse(localStorage.getItem('users')) || [];
+                const existingUser = users.find(user => user.username === username);
+
+                if (existingUser) {
+                    alert('Username already exists');
+                    return;
+                }
+
+                users.push({ username, password });
+                localStorage.setItem('users', JSON.stringify(users));
+                alert('User registered successfully');
+            }
+
+            // Function to log in a user
+            function loginUser(username, password) {
+                const users = JSON.parse(localStorage.getItem('users')) || [];
+                const user = users.find(user => user.username === username && user.password === password);
+
+                if (!user) {
+                    alert('Invalid username or password');
+                    return;
+                }
+
+                sessionStorage.setItem('loggedInUser', username);
+                alert('Login successful');
+                showDashboard();
+            }
+
+            // Function to load transactions for the logged-in user
+            function loadTransactions() {
+                const loggedInUser = sessionStorage.getItem('loggedInUser');
+                if (loggedInUser) {
+                    const allTransactions = JSON.parse(localStorage.getItem('transactionsData')) || {};
+                    transactionsData = allTransactions[loggedInUser] || [];
+                    renderTransactionList();
+                    updateSummary();
+                    updateChartData();
+                }
+            }
+
+            // Function to render the transaction list
+            function renderTransactionList() {
+                transactionList.innerHTML = '';
+                transactionsData.forEach((transaction, index) => {
+                    const listItem = document.createElement('li');
+                    listItem.textContent = `${transaction.type} - $${transaction.amount.toFixed(2)} (${transaction.category})`;
+                    listItem.innerHTML += `<button class="edit-btn" data-index="${index}">Edit</button>`;
+                    listItem.innerHTML += `<button class="delete-btn" data-index="${index}">Delete</button>`;
+                    transactionList.appendChild(listItem);
+                });
+                addEventListenersToButtons();
+            }
+
+            // Function to add event listeners to edit and delete buttons
+            function addEventListenersToButtons() {
+                document.querySelectorAll('.edit-btn').forEach(button => {
+                    button.addEventListener('click', () => {
+                        const index = button.dataset.index;
+                        const transaction = transactionsData[index];
+                        document.getElementById('type').value = transaction.type;
+                        document.getElementById('amount').value = transaction.amount;
+                        document.getElementById('category').value = transaction.category;
+                        transactionsData.splice(index, 1);
+                        renderTransactionList();
+                        localStorage.setItem('transactionsData', JSON.stringify({ [sessionStorage.getItem('loggedInUser')]: transactionsData }));
+                    });
+                });
+
+                document.querySelectorAll('.delete-btn').forEach(button => {
+                    button.addEventListener('click', () => {
+                        const index = button.dataset.index;
+                        transactionsData.splice(index, 1);
+                        renderTransactionList();
+                        localStorage.setItem('transactionsData', JSON.stringify({ [sessionStorage.getItem('loggedInUser')]: transactionsData }));
+                        updateSummary(); // Update the summary after deleting a transaction
+                        updateChartData(); // Update the chart after deleting a transaction
+                    });
+                });
+            }
+
+            // Function to update the summary section
+            function updateSummary() {
+                const totalIncome = transactionsData
+                    .filter(t => t.type === 'income')
+                    .reduce((sum, t) => sum + t.amount, 0).toFixed(2);
+
+                const totalExpense = transactionsData
+                    .filter(t => t.type === 'expense')
+                    .reduce((sum, t) => sum + t.amount, 0).toFixed(2);
+
+                const balance = (totalIncome - totalExpense).toFixed(2);
+
+                document.getElementById('total-income').textContent = `$${totalIncome}`;
+                document.getElementById('total-expense').textContent = `$${totalExpense}`;
+                document.getElementById('balance').textContent = `$${balance}`;
+            }
+
+            // Function to update the chart data
+            function updateChartData() {
+                if (chart) {
+                    const totalIncome = transactionsData
+                        .filter(t => t.type === 'income')
+                        .reduce((sum, t) => sum + t.amount, 0);
+
+                    const totalExpense = transactionsData
+                        .filter(t => t.type === 'expense')
+                        .reduce((sum, t) => sum + t.amount, 0);
+
+                    chart.data.datasets[0].data = [totalIncome, totalExpense];
+                    chart.update();
+                }
+            }
+
+            // Function to show the dashboard after login
+            function showDashboard() {
+                authSection.style.display = 'none';
+                transactionForm.style.display = 'block';
+                transactionsSection.style.display = 'block';
+                summarySection.style.display = 'block';
+                chartSection.style.display = 'block';
+                loadTransactions();
+            }
+
+            // Event listener for form submission
+            authForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+
+                if (authForm.dataset.mode === 'login') {
+                    loginUser(username, password);
+                } else {
+                    registerUser(username, password);
+                }
+            });
+
+            // Event listener for toggling between login and register
+            toggleLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (authForm.dataset.mode === 'login') {
+                    authForm.dataset.mode = 'register';
+                    document.getElementById('auth-title').textContent = 'Register';
+                    document.getElementById('auth-btn').textContent = 'Register';
+                    toggleLink.textContent = 'Already have an account? Login here';
+                } else {
+                    authForm.dataset.mode = 'login';
+                    document.getElementById('auth-title').textContent = 'Login';
+                    document.getElementById('auth-btn').textContent = 'Login';
+                    toggleLink.textContent = 'Don\'t have an account? Register here';
+                }
+            });
+
+            // Event listener for adding a transaction
+            addTransactionForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const type = document.getElementById('type').value;
+                const amount = parseFloat(document.getElementById('amount').value);
+                const category = document.getElementById('category').value;
+
+                if (type && amount >= 0 && category) {
+                    transactionsData.push({ type, amount, category });
+                    localStorage.setItem('transactionsData', JSON.stringify({ [sessionStorage.getItem('loggedInUser')]: transactionsData }));
+                    renderTransactionList();
+                    updateSummary();
+                    updateChartData();
+                    addTransactionForm.reset();
+                }
+            });
+
+            // Event listener for logging out
+            logoutBtn.addEventListener('click', () => {
+                sessionStorage.removeItem('loggedInUser');
+                authSection.style.display = 'block';
+                transactionForm.style.display = 'none';
+                transactionsSection.style.display = 'none';
+                summarySection.style.display = 'none';
+                chartSection.style.display = 'none';
+            });
+
+            // Initialize the chart
+            initializeChart();
+        });
+    </script>
+</body>
+
+</html>
